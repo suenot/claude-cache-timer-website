@@ -12,4 +12,4 @@ python3 -m http.server 8000
 
 Files: `index.html` (English text, source of truth), `i18n.ru.js` (Russian dictionary), `main.js` (canvases and scroll animations), `styles.css`, `theme.js` (light and dark), `i18n.js` (language switch). Copy decisions are recorded in `docs/copy-notes.md`.
 
-Deploy: Vercel, team `kupi`, project `claude-cache-timer`; a push to `main` deploys.
+Deploy: Vercel, team `kupi`, project `claude-cache-timer`, domain https://claude-cache-timer.suenot.com (Cloudflare CNAME to `cname.vercel-dns.com`, DNS-only); a push to `main` deploys.
