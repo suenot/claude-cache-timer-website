@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cache-timer infographic</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get('theme') || 'dark'</script>
+<style>
+/* Static infographic for the plugin README: render at 1600x900 and screenshot (light and dark). */
+body{width:1600px;height:900px;overflow:hidden;padding:60px 72px;position:relative}
+.top{display:flex;align-items:center;gap:12px;color:var(--dim);font:500 16px var(--mono);letter-spacing:.04em}
+.top svg{width:30px;height:30px;color:var(--acc)}
+.top svg *{stroke:currentColor}
+h1{font:700 84px/1 var(--sans);letter-spacing:-.03em;margin:26px 0 18px}
+h1 em{font-style:normal;color:var(--acc)}
+.sub{font:400 25px/1.4 var(--sans);color:var(--ink2);max-width:1420px}
+svg.tl{position:absolute;left:0;top:320px;width:1600px;height:200px;overflow:visible}
+.tl text{font-family:var(--mono)}
+.cols{position:absolute;left:72px;right:72px;top:565px;display:grid;grid-template-columns:1fr 520px;gap:48px}
+.cap{font:500 13px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+.band{font:15px var(--mono);border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:13px 16px;margin-bottom:10px;white-space:nowrap}
+.band.ok{color:var(--dim)} .band.warn{color:var(--amb)} .band.cold{color:var(--hot)}
+.band small{color:var(--dim);margin-left:10px;font-size:12px}
+.chart{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:14px 16px}
+.chart svg{width:100%;height:150px;display:block}
+.chart p{font:14px/1.4 var(--mono);color:var(--ink2);margin-top:8px}
+.url{position:absolute;right:72px;top:64px;font:600 16px var(--mono);color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="top"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M26 4h12"/><path d="M32 4v6"/><path d="M32 12a24 24 0 1 1-17.6 7.7"/><path d="M32 22v14l8 5"/></svg>
+<span>cache-timer · a Claude Code plugin</span></div>
+<div class="url">claude-cache-timer.suenot.com</div>
+<h1>Your cache has <em>one hour.</em></h1>
+<p class="sub">On a Claude subscription the prompt cache lives one hour. Miss it, and the next prompt writes the whole context again at 2× the input price. cache-timer shows the clock and acts before it runs out.</p>
+<svg class="tl" id="tl"></svg>
+<div class="cols">
+  <div>
+    <div class="cap">The band above the prompt</div>
+    <div class="band ok">Last reply 12m 3s ago · cache 47m 57s left · auto-compact in 42m 57s</div>
+    <div class="band warn">Last reply 52m 40s ago · cache 7m 20s left · auto-compact in 2m 20s</div>
+    <div class="band cold">Last reply 1h 4m ago · cache expired<small>(auto-compact skipped)</small></div>
+  </div>
+  <div class="chart">
+    <div class="cap">Keep warm 3h · 6h · 12h</div>
+    <svg id="kw" viewBox="0 0 488 150"></svg>
+    <p>A ping at 50 minutes restarts the hour, so the cache never expires while you are away.</p>
+  </div>
+</div>
+<script>
+const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+const acc = v('--acc'), amb = v('--amb'), hot = v('--hot'), cool = v('--cool'), dim = v('--dim'), ink = v('--ink'), line = v('--line');
+const X = m => 72 + m / 66 * 1456, Y = 110;
+let s = '';
+s += '<rect x="72" y="' + (Y - 5) + '" width="1456" height="10" rx="5" fill="' + line + '"/>';
+s += '<rect x="72" y="' + (Y - 5) + '" width="' + (X(50) - 72) + '" height="10" rx="5" fill="' + acc + '"/>';
+s += '<rect x="' + X(50) + '" y="' + (Y - 5) + '" width="' + (X(60) - X(50)) + '" height="10" fill="' + amb + '"/>';
+s += '<rect x="' + X(60) + '" y="' + (Y - 5) + '" width="' + (X(66) - X(60)) + '" height="10" rx="5" fill="' + hot + '" opacity=".55"/>';
+for (let m = 0; m <= 60; m += 10) s += '<text x="' + X(m) + '" y="' + (Y + 30) + '" fill="' + dim + '" font-size="13" text-anchor="middle">' + m + 'm</text>';
+const mk = (m, col, up, anchor, t1, t2) => {
+  const y1 = up ? Y - 14 : Y + 14, y2 = up ? Y - 58 : Y + 58, ty = up ? Y - 92 : Y + 76;
+  s += '<circle cx="' + X(m) + '" cy="' + Y + '" r="9" fill="' + col + '"/>';
+  s += '<line x1="' + X(m) + '" y1="' + y1 + '" x2="' + X(m) + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="1.5" ' + (up ? '' : 'stroke-dasharray="0"') + '/>';
+  const dx = anchor === 'start' ? 10 : -10;
+  s += '<text x="' + (X(m) + dx) + '" y="' + ty + '" text-anchor="' + anchor + '" font-size="16" font-weight="600" fill="' + col + '">' + t1 + '</text>';
+  s += '<text x="' + (X(m) + dx) + '" y="' + (ty + 22) + '" text-anchor="' + anchor + '" font-size="14" fill="' + ink + '">' + t2 + '</text>';
+};
+mk(0, acc, true, 'start', '0m  a reply lands', 'the context is written to the cache');
+mk(50, amb, true, 'end', '50m  band turns amber', 'keep warm pings here');
+mk(60, hot, true, 'end', '60m  expired', 'full rewrite, 2× input');
+mk(55, cool, false, 'end', '55m  auto-compact', 'a short summary, while still warm');
+document.getElementById('tl').innerHTML = s;
+// keep warm: cache age over a 3h window, pings at 50/100/150, auto-compact at 205
+const W = 488, H = 150, kx = m => 6 + m / 215 * (W - 12), ky = a => H - 20 - a / 60 * (H - 34);
+let k = '<rect x="' + kx(0) + '" y="' + ky(60) + '" width="' + (kx(180) - kx(0)) + '" height="' + (ky(0) - ky(60)) + '" fill="' + acc + '" opacity=".08"/>';
+k += '<line x1="0" x2="' + W + '" y1="' + ky(60) + '" y2="' + ky(60) + '" stroke="' + hot + '" stroke-dasharray="3 5" opacity=".7"/>';
+k += '<text x="' + (W - 4) + '" y="' + (ky(60) - 5) + '" fill="' + hot + '" font-size="11" text-anchor="end" font-family="JetBrains Mono">60m</text>';
+let p = 'M' + kx(0) + ' ' + ky(0);
+[50, 100, 150].forEach((m, i) => { p += ' L' + kx(m) + ' ' + ky(50) + ' L' + kx(m) + ' ' + ky(0); });
+p += ' L' + kx(205) + ' ' + ky(55);
+k += '<path d="' + p + '" fill="none" stroke="' + acc + '" stroke-width="2.5" stroke-linejoin="round"/>';
+[50, 100, 150].forEach(m => { k += '<circle cx="' + kx(m) + '" cy="' + ky(0) + '" r="4.5" fill="' + acc + '"/>'; });
+k += '<circle cx="' + kx(205) + '" cy="' + ky(55) + '" r="4.5" fill="' + cool + '"/>';
+k += '<text x="' + kx(180) + '" y="' + (H - 4) + '" fill="' + dim + '" font-size="11" text-anchor="middle" font-family="JetBrains Mono">3h: window ends</text>';
+k += '<text x="' + kx(0) + '" y="' + (H - 4) + '" fill="' + dim + '" font-size="11" font-family="JetBrains Mono">0h</text>';
+document.getElementById('kw').innerHTML = k;
+</script>
+</body>
+</html>

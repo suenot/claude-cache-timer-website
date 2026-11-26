@@ -55,3 +55,11 @@ Checked every claim against `hooks/register.tsx` and the Claude Code prompt cach
 - After a keep-warm window the next event is the auto-compact at last ping + 55 min, not expiry at + 60. The chart and the stat changed accordingly.
 - Ping counts assume the button is pressed right after a reply (pressed later: 3-4, 7-8, 14-15 for 3h, 6h, 12h). The note says so, and that the ping has not yet run a full 50-minute cycle (as the plugin README states).
 - Band mock: real button labels ("Keep warm 6h"), real `fmt` output ("1h 0m", "auto-compact in 55m 0s").
+
+## Plugin README and infographic (2026-11-26)
+
+`infographic.html` renders the README image (1600x900, `?theme=light|dark`); screenshots go to `claude-cache-timer/docs/infographic-*.png`.
+
+README meanings, in reading order: what it is in one line; the problem (silent expiry, 2x write vs 0.1x read); the three actions; install; details for those who want them.
+
+One-line tagline variants: "Your prompt cache has one hour. This Claude Code plugin shows it and acts before it runs out." **(winner: same idea as the site hero, and says what the plugin does)**; "A clock for the Claude Code prompt cache."; "Know before the cache goes cold."; "Stop paying twice for the same context."; "See the hour, compact before it ends, keep it warm." Codex was again unavailable (usage limit until 18:00).
