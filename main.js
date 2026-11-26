@@ -27,7 +27,7 @@ function bandText(age, extra = true) {
   const ago = T('b.ago', 'Last reply {a} ago').replace('{a}', fmt(age));
   if (age >= TTL) return ago + ' · ' + T('b.exp', 'cache expired');
   let s = ago + ' · ' + T('b.left', 'cache {l} left').replace('{l}', fmt(TTL - age));
-  if (extra && age < 55 * MIN) s += ' · ' + T('b.cmp', 'auto-compact in {m}m').replace('{m}', Math.ceil((55 * MIN - age) / MIN));
+  if (extra && age < 55 * MIN) s += ' · ' + T('b.cmp', 'auto-compact in {m}').replace('{m}', fmt(55 * MIN - age));
   return s;
 }
 const bandClass = age => age >= TTL ? 'cold' : TTL - age < 10 * MIN ? 'warn' : 'ok';
@@ -117,9 +117,13 @@ if (G && !reduce) {
   const el = $('#heroBand'); if (!el) return;
   if (reduce) { paintBand(el, 12 * MIN + 3000, true); return; }
   const t0 = performance.now();
+  // 55 idle minutes, then the plugin compacts: the band restarts the hour from the summary request
+  const at = new Date().toTimeString().slice(0, 5);
   setInterval(() => {
-    const age = (((performance.now() - t0) / 400) % 72) * MIN; // 72 min loop: 12 min of "expired", then a reply
-    paintBand(el, age, true);
+    const m = ((performance.now() - t0) / 400) % 63;
+    if (m < 55) { paintBand(el, m * MIN, true); return; }
+    paintBand(el, (m - 55) * MIN, false);
+    el.textContent += ' · Auto-compacted at ' + at + ' (182k to 14k tokens)';
   }, 100);
 })();
 
@@ -148,8 +152,8 @@ $$('.reveal-words').forEach(p => {
     [0, T('clk.p0', 'A reply lands: the context is written to the cache and the hour starts.')],
     [10, T('clk.p1', 'Every reply resets the clock. Idle time eats it: a meeting, lunch, a long build.')],
     [50, T('clk.p2', 'Under 10 minutes left: the band turns amber. Keep warm would ping now.')],
-    [55, T('clk.p3', 'At 55 minutes an idle session is compacted while the cache can still be read cheaply.')],
-    [60, T('clk.p4', 'Expired. The next prompt writes the whole context to the cache again: cache writes cost twice the base input price, cache reads a tenth of it.')],
+    [55, T('clk.p3', 'At 55 minutes an idle session is compacted while the cache can still be read cheaply. The band then starts a new hour from the summary.')],
+    [60, T('clk.p4', 'Without the compact (skipped, or a context under 30k tokens): expired. The next prompt writes the whole context to the cache again: cache writes cost twice the base input price, cache reads a tenth of it.')],
   ];
   loop($('#clock'), t => {
     shown = lerp(shown, p, .15);
@@ -276,19 +280,19 @@ if (G && !reduce) $$('.state .meter i').forEach(i => {
 (() => {
   const cv = setup($('#warmCanvas')), { ctx } = cv, chips = $$('.chip'), pingsEl = $('#wPings'), coldEl = $('#wCold');
   let H = 6, play = { k: reduce ? 1 : 0 };
-  // ping when the cache is 50 minutes old while the window is open; afterwards it expires 60 minutes after the last read
-  const plan = hrs => { const end = hrs * 60, pings = []; let last = 0; while (last + 50 < end) { last += 50; pings.push(last); } return { end, pings, cold: last + 60 }; };
+  // ping when the cache is 50 minutes old while the window is open; after the window the next timer is the auto-compact at 55 minutes
+  const plan = hrs => { const end = hrs * 60, pings = []; let last = 0; while (last + 50 < end) { last += 50; pings.push(last); } return { end, pings, cmp: last + 55 }; };
   const hm = m => Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
   function pick(h) {
     H = h; chips.forEach(c => c.classList.toggle('on', +c.dataset.h === h));
-    const pl = plan(h); pingsEl.textContent = pl.pings.length; coldEl.textContent = hm(pl.cold);
+    const pl = plan(h); pingsEl.textContent = pl.pings.length; coldEl.textContent = hm(pl.cmp);
     if (G && !reduce) { G.killTweensOf(play); play.k = 0; G.to(play, { k: 1, duration: 2.6, ease: 'power1.inOut' }); }
   }
   chips.forEach(c => c.addEventListener('click', () => pick(+c.dataset.h)));
   if (ST && G && !reduce) ST.create({ trigger: '#warmCanvas', start: 'top 80%', once: true, onEnter: () => pick(H) });
   pick(H);
   loop($('#warmCanvas'), t => {
-    const { w, h } = cv, pl = plan(H), span = pl.cold + 20, pad = 34, x = m => pad + (w - pad * 2) * m / span, top = 26, bot = h - 40, y = a => bot - (bot - top) * Math.min(a, 60) / 60;
+    const { w, h } = cv, pl = plan(H), span = pl.cmp + 25, pad = 34, x = m => pad + (w - pad * 2) * m / span, top = 26, bot = h - 40, y = a => bot - (bot - top) * Math.min(a, 60) / 60;
     ctx.clearRect(0, 0, w, h);
     // window shade
     ctx.fillStyle = 'rgba(' + C.accR + ',.06)'; ctx.fillRect(x(0), top, x(pl.end) - x(0), bot - top);
@@ -305,7 +309,7 @@ if (G && !reduce) $$('.state .meter i').forEach(i => {
     const head = span * play.k;
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
     let prev = 0, age = 0;
-    const seg = [0, ...pl.pings, pl.cold];
+    const seg = [0, ...pl.pings, pl.cmp];
     ctx.beginPath(); ctx.moveTo(x(0), y(0)); ctx.strokeStyle = C.acc;
     for (let i = 1; i < seg.length; i++) {
       const a = seg[i - 1], b = Math.min(seg[i], head);
@@ -314,8 +318,7 @@ if (G && !reduce) $$('.state .meter i').forEach(i => {
       if (seg[i] <= head && i < seg.length - 1) ctx.lineTo(x(b), y(0));
     }
     ctx.stroke();
-    if (head > pl.cold) { ctx.strokeStyle = C.hot; ctx.beginPath(); ctx.moveTo(x(pl.cold), y(60)); ctx.lineTo(x(Math.min(head, span)), y(60)); ctx.stroke(); }
-    // pings
+        // pings
     pl.pings.forEach(m => {
       if (m > head) return;
       const r = 4 + ((t * 1.2 + m / 50) % 1) * 14;
@@ -323,7 +326,7 @@ if (G && !reduce) $$('.state .meter i').forEach(i => {
       ctx.beginPath(); ctx.arc(x(m), y(0), r, 0, TAU); ctx.stroke();
       ctx.fillStyle = C.acc; ctx.beginPath(); ctx.arc(x(m), y(0), 3.5, 0, TAU); ctx.fill();
     });
-    if (head > pl.cold) { ctx.fillStyle = C.hot; ctx.textAlign = 'center'; ctx.fillText(T('warm.cold', 'expired'), x(pl.cold), y(60) - 10); }
+    if (head > pl.cmp) { ctx.fillStyle = C.cool; ctx.beginPath(); ctx.arc(x(pl.cmp), y(55), 4, 0, TAU); ctx.fill(); ctx.textAlign = 'center'; ctx.fillText(T('warm.cmp', 'auto-compact'), x(pl.cmp), y(55) - 12); }
   });
 })();
 

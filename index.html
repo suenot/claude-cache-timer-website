@@ -49,8 +49,8 @@
         <div class="term-bar"><i></i><i></i><i></i><span class="mono dim">claude</span></div>
         <div class="term-body mono">
           <p class="dim">⏺ Done. Tests pass, the change is committed.</p>
-          <p class="band ok" id="heroBand">Last reply 0m 0s ago · cache 60m 0s left · auto-compact in 55m</p>
-          <p class="btns"><span>Keep warm 3h</span><span>6h</span><span>12h</span><span>Skip auto-compact</span></p>
+          <p class="band ok" id="heroBand">Last reply 0m 0s ago · cache 1h 0m left · auto-compact in 55m 0s</p>
+          <p class="btns"><span>Keep warm 3h</span><span>Keep warm 6h</span><span>Keep warm 12h</span><span>Skip auto-compact</span></p>
           <p class="prompt">&gt; <span class="caret"></span></p>
         </div>
       </div>
@@ -64,7 +64,7 @@
 
   <!-- THESIS -->
   <section class="thesis" id="thesis">
-    <p class="big reveal-words" data-i18n="thesis">Claude keeps your context in the prompt cache for one hour. Miss it, and the next prompt writes the whole conversation again at full price.</p>
+    <p class="big reveal-words" data-i18n="thesis">On a Claude subscription, Claude Code keeps your context in the prompt cache for one hour. Miss it, and the next prompt writes the whole conversation to the cache again, at twice the base input price instead of a tenth.</p>
   </section>
 
   <!-- CLOCK (pinned, scroll scrubs time) -->
@@ -78,7 +78,7 @@
           <li data-at="0"><i style="background:var(--acc)"></i><span data-i18n="clk.l0">0m · reply, cache written</span></li>
           <li data-at="50"><i style="background:var(--amb)"></i><span data-i18n="clk.l1">50m · band turns amber</span></li>
           <li data-at="55"><i style="background:var(--cool)"></i><span data-i18n="clk.l2">55m · auto-compact, still warm</span></li>
-          <li data-at="60"><i style="background:var(--hot)"></i><span data-i18n="clk.l3">60m · expired, full rewrite</span></li>
+          <li data-at="60"><i style="background:var(--hot)"></i><span data-i18n="clk.l3">60m · not compacted: expired, full rewrite</span></li>
         </ul>
       </div>
       <div class="clock-stage">
@@ -146,10 +146,10 @@
       <div class="warm-chart"><canvas id="warmCanvas" data-i18n-aria="warm.aria" aria-label="Cache age over the keep-warm window: each ping resets it before it reaches one hour"></canvas></div>
       <div class="stats mono">
         <div><b id="wPings">7</b><span data-i18n="warm.st1">pings in the window</span></div>
-        <div><b id="wCold">6h 50m</b><span data-i18n="warm.st2">cache cold again at</span></div>
+        <div><b id="wCold">6h 45m</b><span data-i18n="warm.st2">window over: auto-compact at</span></div>
         <div><b>3</b><span data-i18n="warm.st3">failed pings in a row stop it</span></div>
       </div>
-      <p class="mono dim small note" data-i18n="warm.note">Each ping re-reads the context from the cache, so it costs tokens at the cache-read rate. Warming stops by itself at the end of the window, when a ping finds the cache cold, or after /clear.</p>
+      <p class="mono dim small note" data-i18n="warm.note">Each ping re-reads the context from the cache, so it costs tokens at the cache-read rate. Warming stops by itself at the end of the window, when a ping finds the cache cold, or after /clear. The chart assumes you press the button right after a reply. The ping has not yet been run through a full 50-minute cycle.</p>
     </div>
   </section>
 
@@ -162,13 +162,15 @@
         <article class="card">
           <span class="tag mono" data-i18n="ins.t1">in a Claude Code session</span>
           <pre class="code mono"><span class="k">/plugin</span> install cache-timer
-  --marketplace suenot/claude-cache-timer</pre>
+  --marketplace
+  suenot/claude-cache-timer</pre>
           <button class="copy mono" data-copy="/plugin install cache-timer --marketplace suenot/claude-cache-timer" data-i18n="ins.copy">copy</button>
         </article>
         <article class="card">
           <span class="tag mono" data-i18n="ins.t2">from a shell</span>
           <pre class="code mono"><span class="k">claude</span> plugin install cache-timer
-  --marketplace suenot/claude-cache-timer</pre>
+  --marketplace
+  suenot/claude-cache-timer</pre>
           <button class="copy mono" data-copy="claude plugin install cache-timer --marketplace suenot/claude-cache-timer" data-i18n="ins.copy">copy</button>
         </article>
         <article class="card">
@@ -178,7 +180,7 @@
       </div>
       <div class="hero-cta">
         <a class="btn" href="https://github.com/suenot/claude-cache-timer" target="_blank" rel="noopener" data-i18n="ins.gh">Source on GitHub <i>↗</i></a>
-        <span class="mono dim" data-i18n="ins.ttl">TTL is one constant: set <code>TTL_MS</code> to 5 minutes if your session uses the short cache.</span>
+        <span class="mono dim" data-i18n="ins.ttl">The hour is the default on a Claude subscription within plan usage. With an API key or usage credits Claude Code caches for 5 minutes: set <code>promptCacheTtl</code> to <code>1h</code>, or <code>TTL_MS</code> to 5 minutes.</span>
       </div>
     </div>
   </section>

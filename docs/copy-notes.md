@@ -44,3 +44,14 @@ Lead variants: (a) "cache-timer puts that hour above the Claude Code prompt, com
 Thesis: "Claude keeps your context in the prompt cache for one hour. Miss it, and the next prompt writes the whole conversation again at full price." Chosen over shorter variants because it carries both meanings 1 and 2 in one sentence.
 
 Russian follows the same picks: "У кэша есть один час.", "Час в тепле. Потом полная цена.", "Три цвета. Один взгляд.", "Сжать, пока кэш теплый.", "Ушли на обед. Кэш остался теплым.", "Одна строка. Настраивать нечего."
+
+## Audit fixes (2026-11-26)
+
+Checked every claim against `hooks/register.tsx` and the Claude Code prompt caching docs (code.claude.com/docs/en/prompt-caching).
+
+- The one-hour TTL is the default only on a Claude subscription within plan usage; API keys, usage credits and cloud providers get 5 minutes. Thesis now says "On a Claude subscription", and the install note explains `promptCacheTtl` / `TTL_MS`.
+- "At full price" understated the cost: a 1-hour cache write is 2x base input. Thesis now says "at twice the base input price instead of a tenth". The headline "Then full price." stays as a figure of speech (the discount is gone).
+- Auto-compact at 55 minutes resets the band (the plugin sets `lastAt` to the summary request). The clock's 60-minute step is now labelled "not compacted", and the hero band shows the real default path: 55 idle minutes, then "Auto-compacted at HH:MM".
+- After a keep-warm window the next event is the auto-compact at last ping + 55 min, not expiry at + 60. The chart and the stat changed accordingly.
+- Ping counts assume the button is pressed right after a reply (pressed later: 3-4, 7-8, 14-15 for 3h, 6h, 12h). The note says so, and that the ping has not yet run a full 50-minute cycle (as the plugin README states).
+- Band mock: real button labels ("Keep warm 6h"), real `fmt` output ("1h 0m", "auto-compact in 55m 0s").
