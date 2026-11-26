@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="meta.title">cache-timer — a clock for the Claude Code prompt cache</title>
+<meta name="description" data-i18n-content="meta.desc" content="A Claude Code plugin: shows how long the 1-hour prompt cache has left, compacts an idle session before it expires, and keeps the cache warm while you are away.">
+<meta name="theme-color" content="#07080a">
+<meta property="og:title" content="cache-timer — your cache has one hour">
+<meta property="og:description" content="A band above the Claude Code prompt: time left on the 1-hour prompt cache, auto-compact before it expires, keep warm for 3, 6 or 12 hours.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<header class="nav">
+  <a class="brand" href="#top" aria-label="cache-timer">
+    <span class="logo" id="navLogo"></span>
+    <span>cache<b>timer</b></span>
+  </a>
+  <nav>
+    <a href="#clock" data-i18n="nav.clock">Clock</a>
+    <a href="#band" data-i18n="nav.band">Band</a>
+    <a href="#compact" data-i18n="nav.compact">Auto-compact</a>
+    <a href="#warm" data-i18n="nav.warm">Keep warm</a>
+    <a href="#install" data-i18n="nav.install">Install</a>
+    <a href="https://github.com/suenot/claude-cache-timer" target="_blank" rel="noopener">GitHub</a>
+    <span id="langSlot"></span>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="hero">
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="hero-inner">
+      <div class="hero-logo" id="heroLogo" aria-hidden="true"></div>
+      <p class="kicker mono" data-i18n="hero.kicker">a Claude Code plugin · MIT</p>
+      <h1 class="h-mega" id="heroTitle" data-i18n="hero.title"><span class="ln"><span>Your cache</span></span> <span class="ln"><span>has <em class="accent">one hour.</em></span></span></h1>
+      <p class="lead" id="heroLead" data-i18n="hero.lead">cache-timer puts that hour above the Claude Code prompt, compacts an idle session before it runs out, and keeps the cache warm while you are away.</p>
+      <div class="term hero-term" aria-label="Preview of the band above the prompt">
+        <div class="term-bar"><i></i><i></i><i></i><span class="mono dim">claude</span></div>
+        <div class="term-body mono">
+          <p class="dim">⏺ Done. Tests pass, the change is committed.</p>
+          <p class="band ok" id="heroBand">Last reply 0m 0s ago · cache 60m 0s left · auto-compact in 55m</p>
+          <p class="btns"><span>Keep warm 3h</span><span>6h</span><span>12h</span><span>Skip auto-compact</span></p>
+          <p class="prompt">&gt; <span class="caret"></span></p>
+        </div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn" href="#install" data-i18n="hero.cta">Install in one line <i>↓</i></a>
+        <span class="mono dim" data-i18n="hero.scroll">or scroll to watch the hour run out</span>
+      </div>
+    </div>
+    <div class="ticker mono" aria-hidden="true"><div class="ticker-track" id="tickerTrack"></div></div>
+  </section>
+
+  <!-- THESIS -->
+  <section class="thesis" id="thesis">
+    <p class="big reveal-words" data-i18n="thesis">Claude keeps your context in the prompt cache for one hour. Miss it, and the next prompt writes the whole conversation again at full price.</p>
+  </section>
+
+  <!-- CLOCK (pinned, scroll scrubs time) -->
+  <section class="pin-section" id="clock">
+    <div class="pin-stage">
+      <div class="pin-copy">
+        <p class="kicker mono" data-i18n="clk.kicker">01 / the clock</p>
+        <h2 class="h-big" data-i18n="clk.title">Warm for an hour.<br><span class="accent">Then full price.</span></h2>
+        <p class="body" id="clockText">A reply lands: the context is written to the cache and the hour starts.</p>
+        <ul class="legend mono" id="clockLegend">
+          <li data-at="0"><i style="background:var(--acc)"></i><span data-i18n="clk.l0">0m · reply, cache written</span></li>
+          <li data-at="50"><i style="background:var(--amb)"></i><span data-i18n="clk.l1">50m · band turns amber</span></li>
+          <li data-at="55"><i style="background:var(--cool)"></i><span data-i18n="clk.l2">55m · auto-compact, still warm</span></li>
+          <li data-at="60"><i style="background:var(--hot)"></i><span data-i18n="clk.l3">60m · expired, full rewrite</span></li>
+        </ul>
+      </div>
+      <div class="clock-stage">
+        <canvas id="clockCanvas" data-i18n-aria="clk.aria" aria-label="Animation: a one-hour cache clock; after 60 minutes the next prompt costs a full rewrite"></canvas>
+        <p class="band mono ok" id="clockBand">Last reply 0m 0s ago · cache 60m 0s left</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BAND -->
+  <section class="bandsec" id="band">
+    <div class="wrap">
+      <p class="kicker mono" data-i18n="band.kicker">02 / the band</p>
+      <h2 class="h-big" data-i18n="band.title">Three colors.<br><span class="accent">One glance.</span></h2>
+      <p class="body narrow" data-i18n="band.body">A single line above the prompt. It counts from the last model response, so every reply of a running turn resets it, and it refreshes every 15 seconds.</p>
+      <div class="states" id="states">
+        <article class="state" data-s="ok">
+          <span class="mono small" data-i18n="band.s1">more than 10 minutes left · dim</span>
+          <p class="band mono ok">Last reply 12m 3s ago · cache 47m 57s left</p>
+          <div class="meter"><i style="--v:.8"></i></div>
+        </article>
+        <article class="state" data-s="warn">
+          <span class="mono small" data-i18n="band.s2">under 10 minutes · warning</span>
+          <p class="band mono warn">Last reply 52m 40s ago · cache 7m 20s left</p>
+          <div class="meter"><i style="--v:.12"></i></div>
+        </article>
+        <article class="state" data-s="cold">
+          <span class="mono small" data-i18n="band.s3">past the hour · error</span>
+          <p class="band mono cold">Last reply 1h 4m ago · cache expired</p>
+          <div class="meter"><i style="--v:0"></i></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUTO-COMPACT -->
+  <section class="compact" id="compact">
+    <div class="wrap">
+      <p class="kicker mono" data-i18n="cmp.kicker">03 / auto-compact</p>
+      <h2 class="h-big" data-i18n="cmp.title">Compact while<br><span class="accent">it is still warm.</span></h2>
+      <p class="body narrow" data-i18n="cmp.body">When the session sits idle and the cache is 55 minutes old, the mod runs <code>/compact</code> itself. The summary request reads the cached prefix cheaply, and your next prompt pays for a short summary instead of the whole context.</p>
+      <div class="cmp-grid">
+        <canvas id="cmpCanvas" data-i18n-aria="cmp.aria" aria-label="Animation: a long context collapses into a short summary before the cache expires"></canvas>
+        <div class="steps" id="steps">
+          <svg class="steps-line" viewBox="0 0 4 100" preserveAspectRatio="none" aria-hidden="true"><line x1="2" y1="0" x2="2" y2="100" id="stepsLine"/></svg>
+          <article class="step"><div class="step-n mono">01</div><div><h3 data-i18n="c1.h">Once per idle period</h3><p data-i18n="c1.p">After a compact nothing more happens until you write again. An abandoned session is compacted at most once, never every hour.</p></div></article>
+          <article class="step"><div class="step-n mono">02</div><div><h3 data-i18n="c2.h">Stays out of the way</h3><p data-i18n="c2.p">Skipped while a turn runs, while Keep warm is on, when the cache has already expired, and when the context is under 30k tokens.</p></div></article>
+          <article class="step"><div class="step-n mono">03</div><div><h3 data-i18n="c3.h">Skip when you are done</h3><p data-i18n="c3.p">Finished the task and will not come back? Press <b>Skip auto-compact</b> and spend nothing. The skip lasts until your next message.</p></div></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEEP WARM -->
+  <section class="warm" id="warm">
+    <div class="wrap">
+      <p class="kicker mono" data-i18n="warm.kicker">04 / keep warm</p>
+      <h2 class="h-big" data-i18n="warm.title">Out for lunch.<br><span class="accent">Cache stays warm.</span></h2>
+      <p class="body narrow" data-i18n="warm.body">Press Keep warm 3h, 6h or 12h. When the cache is 50 minutes old and no turn is running, the mod sends one tool-less fork over the transcript. It reads the cached prefix and restarts the hour. Pick a window:</p>
+      <div class="warm-ctl" role="group" aria-label="Keep warm window">
+        <button class="chip" data-h="3">Keep warm 3h</button>
+        <button class="chip on" data-h="6">6h</button>
+        <button class="chip" data-h="12">12h</button>
+      </div>
+      <div class="warm-chart"><canvas id="warmCanvas" data-i18n-aria="warm.aria" aria-label="Cache age over the keep-warm window: each ping resets it before it reaches one hour"></canvas></div>
+      <div class="stats mono">
+        <div><b id="wPings">7</b><span data-i18n="warm.st1">pings in the window</span></div>
+        <div><b id="wCold">6h 50m</b><span data-i18n="warm.st2">cache cold again at</span></div>
+        <div><b>3</b><span data-i18n="warm.st3">failed pings in a row stop it</span></div>
+      </div>
+      <p class="mono dim small note" data-i18n="warm.note">Each ping re-reads the context from the cache, so it costs tokens at the cache-read rate. Warming stops by itself at the end of the window, when a ping finds the cache cold, or after /clear.</p>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="install" id="install">
+    <div class="wrap">
+      <p class="kicker mono" data-i18n="ins.kicker">05 / install</p>
+      <h2 class="h-big" data-i18n="ins.title">One line.<br><span class="accent">Nothing to configure.</span></h2>
+      <div class="cards">
+        <article class="card">
+          <span class="tag mono" data-i18n="ins.t1">in a Claude Code session</span>
+          <pre class="code mono"><span class="k">/plugin</span> install cache-timer
+  --marketplace suenot/claude-cache-timer</pre>
+          <button class="copy mono" data-copy="/plugin install cache-timer --marketplace suenot/claude-cache-timer" data-i18n="ins.copy">copy</button>
+        </article>
+        <article class="card">
+          <span class="tag mono" data-i18n="ins.t2">from a shell</span>
+          <pre class="code mono"><span class="k">claude</span> plugin install cache-timer
+  --marketplace suenot/claude-cache-timer</pre>
+          <button class="copy mono" data-copy="claude plugin install cache-timer --marketplace suenot/claude-cache-timer" data-i18n="ins.copy">copy</button>
+        </article>
+        <article class="card">
+          <span class="tag mono" data-i18n="ins.t3">in the desktop app</span>
+          <p data-i18n="ins.desk">Click <b>+</b> next to the prompt box, then <b>Plugins</b>, <b>Add marketplace</b> with <code>suenot/claude-cache-timer</code>, then <b>Add plugin</b>.</p>
+        </article>
+      </div>
+      <div class="hero-cta">
+        <a class="btn" href="https://github.com/suenot/claude-cache-timer" target="_blank" rel="noopener" data-i18n="ins.gh">Source on GitHub <i>↗</i></a>
+        <span class="mono dim" data-i18n="ins.ttl">TTL is one constant: set <code>TTL_MS</code> to 5 minutes if your session uses the short cache.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot-logo" id="footLogo" aria-hidden="true"></div>
+  <p class="mono" data-i18n="foot.by">cache-timer · open source, MIT · <a href="https://github.com/suenot/claude-cache-timer" target="_blank" rel="noopener">suenot/claude-cache-timer</a></p>
+  <p class="mono dim small" data-i18n="foot.note">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="i18n.js"></script>
+<script src="i18n.ru.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
